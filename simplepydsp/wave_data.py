@@ -1,15 +1,16 @@
 """Process WAVE file contents using Python data structures."""
 
 import argparse
-import pcm_wave
 import sys
+
+from simplepydsp import pcm_wave
 
 class WaveData(object):
     def __init__(self, input_file=None, output_file=None):
         """
         Instantiate input and output wave objects.
 
-        Defaults to STDIN and STDOUT if input_file or output_file are None or 
+        Defaults to STDIN and STDOUT if input_file or output_file are None or
         unspecified.
 
         :param input_file: input file path or handle, None for STDIN.

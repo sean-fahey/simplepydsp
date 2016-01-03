@@ -2,7 +2,6 @@
 
 import __builtin__
 import struct
-import sys
 
 
 class WaveBase(object):
@@ -104,8 +103,8 @@ class WaveReader(WaveBase):
 
         format_map = {1: 'b', 2: 'h', 4: 'l', 8: 'q'}
 
-        bytes = self.sample_width
-        size = count * self.channels * bytes
+        byte_count = self.sample_width
+        size = count * self.channels * byte_count
         frames = self.file.read(size)
 
         if not frames:
@@ -114,19 +113,19 @@ class WaveReader(WaveBase):
         # Handle 24 bit (plus 40, 48, and 56 bit, if they were to exist)
         # Treat packed values as the closest available C struct
         # TODO: determine whether this needs to handle endianness
-        if (bytes % 2 and bytes > 1):
-            # Find the closest next power of two 
-            next_power = 2 ** int(round(bytes ** 0.5 + 0.5))
-            pad_factor = next_power - bytes
+        if byte_count % 2 and byte_count > 1:
+            # Find the closest next power of two
+            next_power = 2 ** int(round(byte_count ** 0.5 + 0.5))
+            pad_factor = next_power - byte_count
             pos = 0
             while pos < size:
                 # Pad with zeros to fill the expected size for the struct type
                 frames = frames[:pos] + '\x00' * pad_factor + frames[pos:]
-                pos += bytes
-            bytes = next_power
+                pos += byte_count
+            byte_count = next_power
 
-        format_str = str(count * self.channels) + format_map[bytes]
-        return _unpack(format_str,'little', frames) 
+        format_str = str(count * self.channels) + format_map[byte_count]
+        return _unpack(format_str, 'little', frames)
 
 
 class WaveWriter(WaveBase):
@@ -143,9 +142,6 @@ class WaveWriter(WaveBase):
         self.sample_width = 0
         self.frame_rate = 0
         self.frames = 0
-        self.frames_written = 0
-        self.data_written = 0
-        self.data_length = 0
         self.header_written = False
 
     def set_channels(self, channels):
@@ -226,21 +222,21 @@ class WaveWriter(WaveBase):
 
         format_map = {1: 'b', 2: 'h', 4: 'l', 8: 'q'}
 
-        bytes = self.sample_width
+        byte_count = self.sample_width
 
         # Handle 24 bit (plus 40, 48, and 56 bit, if they were to exist)
-        if (bytes % 2 and bytes > 1):
-            # Find the closest next power of two 
-            next_power = 2 ** int(round(bytes ** 0.5 + 0.5))
+        if byte_count % 2 and byte_count > 1:
+            # Find the closest next power of two
+            next_power = 2 ** int(round(byte_count ** 0.5 + 0.5))
             for frame in data:
                 for sample in frame:
                     sample = _pack(format_map[next_power], 'little', sample)
                     # Strip padded zeroes
-                    sample = sample[-bytes:]
+                    sample = sample[-byte_count:]
                     self.file.write(sample)
         else:
             for frame in data:
-                format_str = str(self.channels) + format_map[bytes]
+                format_str = str(self.channels) + format_map[byte_count]
                 frame = _pack(format_str, 'little', *frame)
                 self.file.write(frame)
         self.file.flush()
